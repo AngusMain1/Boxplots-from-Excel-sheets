@@ -1,0 +1,87 @@
+#This script will be used to generate boxplots to compare treatment plans made "manually" and those made using RapidPlan.
+
+#Import time
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+def create_boxplots2(fileCTV, fileOTV, title, lim1, lim2):
+    """
+    Create side-by-side boxplots from two Excel files.
+
+    Parameters:
+    - fileCTV: Path to the first Excel file.
+    - fileOTV: Path to the second Excel file.
+    - title: Title of the plot.
+    - lim1: Minimum value for the y-axis.
+    - lim2: Maximum value for the y-axis.
+    """
+    # Load data from the Excel files
+    data1 = pd.read_excel(fileCTV)
+    data2 = pd.read_excel(fileOTV)
+
+    # Creating separate dataframes for CTV and OTV data.
+    df=pd.DataFrame({
+        'Dose-Volume Metric':data1[:]['Dose-Volume Metric'],
+        'Original Plan':data1[:]['Original Plan'],
+        'RapidPlan without RO':data1[:]['RapidPlan without RO'],
+        'RapidPlan with CTV RO':data1[:]['RapidPlan with CTV RO']
+    })
+
+
+    df_long = df.melt(id_vars= 'Dose-Volume Metric', value_vars = ['Original Plan', 'RapidPlan without RO', 'RapidPlan with CTV RO'], \
+                      var_name = 'Planning Technique', value_name = 'Values')
+
+    df2 = pd.DataFrame({
+        'Dose-Volume Metric':data2[:]['Dose-Volume Metric'],
+        'Original Plan':data2[:]['Original Plan'],
+        'RapidPlan without RO':data2[:]['RapidPlan without RO'],
+        'RapidPlan with CTV RO':data2[:]['RapidPlan with CTV RO']
+    })
+
+    df_long2 = df2.melt(id_vars= 'Dose-Volume Metric', value_vars = ['Original Plan', 'RapidPlan without RO', 'RapidPlan with CTV RO'], \
+                        var_name = 'Planning Technique', value_name = 'Values')
+
+    # Create a figure with two subplots
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10), sharey=True)
+
+    fig.suptitle(title, fontsize=20, y=1.00)
+
+    # Create the first boxplot
+    sns.boxplot(data=df_long, ax=axes[0], x='Dose-Volume Metric', y= 'Values', hue= 'Planning Technique', legend = False,  palette = 'Set2' )
+    sns.stripplot(data=df_long, ax=axes[0], x='Dose-Volume Metric', y='Values', hue= 'Planning Technique', legend = False, jitter=True, \
+                  size=5, dodge=True, marker = 'o', palette = 'Set2')
+    axes[0].set_title('CTV', fontsize = 20)
+    axes[0].set_xlabel('Dose-Volume Metric', fontsize = 16)
+
+    # Draw horizontal lines on the graph to show the clinical goals.
+    y_val1 = 107
+    y_val2 = 95
+    y_val3 = 90
+    axes[0].axhline(y=y_val1, color='gray', linestyle ='--', linewidth=1)
+    for ax in axes:
+        ax.axhline(y=y_val2, color='gray', linestyle ='--', linewidth=1)
+        ax.axhline(y=y_val3, color='gray', linestyle ='--', linewidth=1)
+
+    # Set a ylabel
+    axes[0].set_ylabel('Dose (%)', fontsize = 16)
+    plt.ylim(lim1, lim2)
+
+    # Create the second boxplot
+    sns.boxplot(data=df_long2, ax=axes[1], x='Dose-Volume Metric', y= 'Values', hue= 'Planning Technique', palette = 'Set2' )
+    sns.stripplot(data=df_long2, ax=axes[1], x='Dose-Volume Metric', y='Values', hue= 'Planning Technique', legend= False, jitter=True, \
+                  size=5, dodge=True, marker = 'o', palette = 'Set2')
+    axes[1].set_title('OTV', fontsize = 20)
+    axes[1].set_xlabel('Dose-Volume Metric', fontsize = 16)
+
+    # Adjust layout
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+    #Annotating the horizontal lines
+    axes[0].annotate('D2% Clinical Goal < 107%', xy = (1.75,106.25))
+    axes[0].annotate('D95% Clinical Goal > 95%', xy = (-0.25,94.25))
+    axes[1].annotate('D99% Clinical Goal > 90%', xy = (-0.25,89.25))
+
+    # Show the plots
+    plt.show()
