@@ -6,82 +6,130 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-def create_boxplots2(fileCTV, fileOTV, title, lim1, lim2):
-    """
-    Create side-by-side boxplots from two Excel files.
+#Functions
 
-    Parameters:
-    - fileCTV: Path to the first Excel file.
-    - fileOTV: Path to the second Excel file.
-    - title: Title of the plot.
-    - lim1: Minimum value for the y-axis.
-    - lim2: Maximum value for the y-axis.
-    """
-    # Load data from the Excel files
-    data1 = pd.read_excel(fileCTV)
-    data2 = pd.read_excel(fileOTV)
+def data_formatting(data_file):
+  """
 
-    # Creating separate dataframes for CTV and OTV data.
-    df=pd.DataFrame({
-        'Dose-Volume Metric':data1[:]['Dose-Volume Metric'],
-        'Original Plan':data1[:]['Original Plan'],
-        'RapidPlan without RO':data1[:]['RapidPlan without RO'],
-        'RapidPlan with CTV RO':data1[:]['RapidPlan with CTV RO']
-    })
+  This function returns the data in long format.
+  data_file = the data file.
+
+  """
+  data = pd.read_excel(data_file)
+
+  array_headers = []
+
+  for i in range(len(data.columns)):
+    array_headers.append(data.columns[i])
+
+  df_long = data.melt(id_vars = data.columns[0], value_vars = array_headers, var_name = 'Planning Technique', value_name = 'Values')
+
+  return df_long
 
 
-    df_long = df.melt(id_vars= 'Dose-Volume Metric', value_vars = ['Original Plan', 'RapidPlan without RO', 'RapidPlan with CTV RO'], \
-                      var_name = 'Planning Technique', value_name = 'Values')
+def boxplot(data_file, data_long, axis, title_box, y_label, lim1, lim2, legend_choice):
+  """
 
-    df2 = pd.DataFrame({
-        'Dose-Volume Metric':data2[:]['Dose-Volume Metric'],
-        'Original Plan':data2[:]['Original Plan'],
-        'RapidPlan without RO':data2[:]['RapidPlan without RO'],
-        'RapidPlan with CTV RO':data2[:]['RapidPlan with CTV RO']
-    })
+  This function is used to draw boxplots.
+  - data_file = the data file.
+  - dflong = the data that has been read in from the excel file in long format.
+  - axis = the axis that the boxplot will be plotted on. e.g. axes [0,0].
+  - title_box = the title of the boxplot.
+  - y_label = the label for the y-axis.
+  - lim1 = the minimum value for the y-axis.
+  - lim2 = the maximum value for the y-axis.
+  - legend_choice = Would you like a legend on that plot? Yes or No
 
-    df_long2 = df2.melt(id_vars= 'Dose-Volume Metric', value_vars = ['Original Plan', 'RapidPlan without RO', 'RapidPlan with CTV RO'], \
-                        var_name = 'Planning Technique', value_name = 'Values')
+  """
+  data_reading = pd.read_excel(data_file)
 
-    # Create a figure with two subplots
-    fig, axes = plt.subplots(1, 2, figsize=(20, 10), sharey=True)
+  sns.boxplot(data=data_long, ax=axis, x=data_reading.columns[0], y= 'Values', hue= 'Planning Technique', legend = False,  palette = 'Set2' )
 
-    fig.suptitle(title, fontsize=20, y=1.00)
+  if legend_choice == 'Yes':
+    legend_control = True
+  elif legend_choice == 'yes':
+    legend_control = True
+  else:
+    legend_control = False
 
-    # Create the first boxplot
-    sns.boxplot(data=df_long, ax=axes[0], x='Dose-Volume Metric', y= 'Values', hue= 'Planning Technique', legend = False,  palette = 'Set2' )
-    sns.stripplot(data=df_long, ax=axes[0], x='Dose-Volume Metric', y='Values', hue= 'Planning Technique', legend = False, jitter=True, \
-                  size=5, dodge=True, marker = 'o', palette = 'Set2')
-    axes[0].set_title('CTV', fontsize = 20)
-    axes[0].set_xlabel('Dose-Volume Metric', fontsize = 16)
+  individual_points = sns.stripplot(data=data_long, ax=axis, x=data_reading.columns[0], y='Values', hue= 'Planning Technique', legend = legend_control, jitter=True, \
+                  size=7, dodge=True, marker = 'o', palette = 'Set2', edgecolor = 'black', linewidth = 0.5)
 
-    # Draw horizontal lines on the graph to show the clinical goals.
-    y_val1 = 107
-    y_val2 = 95
-    y_val3 = 90
-    axes[0].axhline(y=y_val1, color='gray', linestyle ='--', linewidth=1)
-    for ax in axes:
-        ax.axhline(y=y_val2, color='gray', linestyle ='--', linewidth=1)
-        ax.axhline(y=y_val3, color='gray', linestyle ='--', linewidth=1)
+  if legend_choice == 'Yes':
+    individual_points.legend(fontsize = 18)
+  elif legend_choice == 'yes':
+    individual_points.legend(fontsize = 18)
 
-    # Set a ylabel
-    axes[0].set_ylabel('Dose (%)', fontsize = 16)
-    plt.ylim(lim1, lim2)
+  axis.set_title(title_box, fontsize = 30)
+  axis.set_xlabel(data_reading.columns[0], fontsize = 12)
+  axis.set_ylim(lim1, lim2)
+  axis.set_ylabel(y_label, fontsize = 14)
 
-    # Create the second boxplot
-    sns.boxplot(data=df_long2, ax=axes[1], x='Dose-Volume Metric', y= 'Values', hue= 'Planning Technique', palette = 'Set2' )
-    sns.stripplot(data=df_long2, ax=axes[1], x='Dose-Volume Metric', y='Values', hue= 'Planning Technique', legend= False, jitter=True, \
-                  size=5, dodge=True, marker = 'o', palette = 'Set2')
-    axes[1].set_title('OTV', fontsize = 20)
-    axes[1].set_xlabel('Dose-Volume Metric', fontsize = 16)
+#Example using the data to create the plots.
 
-    # Adjust layout
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+file_array = ['R_Plan_Brainstem.xlsx', 'R_Plan_Chiasm.xlsx', 'R_Plan_hypo_L.xlsx', 'R_Plan_hypo_R.xlsx',\
+                    'R_Plan_temp_lobe_L.xlsx', 'R_Plan_temp_lobe_R.xlsx']
 
-    #Annotating the horizontal lines
-    axes[0].annotate('D2% Clinical Goal < 107%', xy = (1.75,106.25))
-    axes[0].annotate('D95% Clinical Goal > 95%', xy = (-0.25,94.25))
-    axes[1].annotate('D99% Clinical Goal > 90%', xy = (-0.25,89.25))
+#Format the data in the expected, long format.
+df_long_dict = {}
 
-    # Show the plots
-    plt.show()
+for i in range(len(file_array)):
+  df_long_dict['df_long' + str(i+1)] = data_formatting(file_array[i])
+
+
+#Create a figure of appropriate size for the data.
+if len(file_array) == 1:
+  fig, axes = plt.subplots(1, 1, figsize=(20, 10))
+elif len(file_array) == 2:
+  fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+elif len(file_array) == 3:
+  fig, axes = plt.subplots(1, 3, figsize=(20, 10))
+elif len(file_array) == 4:
+  fig, axes = plt.subplots(2, 2, figsize=(20, 20))
+elif len(file_array) == 6:
+  fig, axes = plt.subplots(3, 2, figsize=(20, 25))
+else:
+  print('Error: Choose an appropriate number of files')
+
+#A Main title for the plot.
+fig.suptitle('Doses to OARs', fontsize=50, fontweight = 'bold')
+
+#Use this code to draw boxplots. Choose the title, y axis label, y limits, and\
+#whether you'd like a legend on that figure.
+boxplot(file_array[0], df_long_dict['df_long1'], axes[0,0], 'Brainstem', 'Dose(Gy)', 0, 60, 'No')
+
+#Draw horizontal lines where you'd like them. Can change the y value to change its height.
+axes[0,0].axhline(y=52.4, color='gray', linestyle ='--', linewidth=1)
+axes[0,0].axhline(y=55, color='gray', linestyle ='--', linewidth=1)
+
+#Annotate these lines. Choose what to be said, and the coordinates of the annotation.
+axes[0,0].annotate('D0.1cc Clinical Goal < 55 Gy', xy = (-0.25, 55.5))
+axes[0,0].annotate('D50% Clinical Goal < 52.4 Gy', xy = (0.65, 53))
+
+
+#Repeat this process for each axis in your figure.
+boxplot(file_array[1], df_long_dict['df_long2'], axes[0,1], 'Optic Chiasm', 'Dose(Gy)', 48, 57, 'Yes')
+axes[0,1].axhline(y=54, color='gray', linestyle ='--', linewidth=1)
+axes[0,1].annotate('D2% and D0.1cc Clinical Goals < 54 Gy', xy = (0.25, 54.25))
+
+
+boxplot(file_array[2], df_long_dict['df_long3'], axes[1,0], 'Left Hypothalamus', 'Dose(Gy)', 45, 52, 'No')
+axes[1,0].annotate('D50% Clinical Goal < 5 Gy. Line below graph.', xy = (0.1, 45.5))
+
+boxplot(file_array[3], df_long_dict['df_long4'], axes[1,1], 'Right Hypothalamus', 'Dose(Gy)', 45, 52, 'No')
+axes[1,1].annotate('D50% Clinical Goal < 5 Gy. Line below graph.', xy = (0.1, 45.5))
+
+boxplot(file_array[4], df_long_dict['df_long5'], axes[2,0], 'Left Temporal Lobe', 'Volume (%)', 0, 40, 'No')
+axes[2,0].axhline(y=10, color='gray', linestyle ='--', linewidth=1)
+axes[2,0].annotate('V20Gy Clinical Goal < 10%', xy = (-0.49, 6.5))
+
+boxplot(file_array[5], df_long_dict['df_long6'], axes[2,1], 'Right Temporal Lobe', 'Volume(%)', 0, 40, 'No')
+axes[2,1].axhline(y=10, color='gray', linestyle ='--', linewidth=1)
+axes[2,1].annotate('V20Gy Clinical Goal < 10%', xy = (0.28, 4))
+
+#Changing the size of the labels on the xticks
+plt.rcParams.update({'xtick.labelsize':12, 'ytick.labelsize':12})
+
+plt.tight_layout(rect=[0, 0, 1, 0.9])
+
+plt.show()
